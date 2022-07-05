@@ -1,0 +1,132 @@
+<div id = "test-application">
+    <script>
+        function LoadTest( res ) {
+            console.log( res );
+
+            const test = res[ 0 ];
+
+            $( "#test-application" ).append( `<h3 class = "text-light bg-dark m-2 ">Тест: ${test.title}</h3>` );
+
+            const container = $( "<div>", {
+                id: "test-container",
+            }).appendTo( "#test-application" );
+
+            test.content.forEach( question => { 
+                const question_container = $( "<div>", {} ).appendTo( $( "#test-container" ) );
+                question_container[ 0 ][ "type" ] = question.type;
+                question_container.append( `<p class = "question-text">${question.text}</p>` );
+                QuestionTypes[ question.type ].formatter( question_container, question );
+            });
+
+            const mark_p = $( "<p>" ).html( "Оцените тест: " ).append( "<p>(5/5)</p>" );
+            $( "<input>", {
+                type: "range",
+                value: 5,
+                min: 1,
+                max: 5,
+                id: "mark",
+            }).on( "input", function() {
+                $( this ).parent().children( "p" ).html( `(${$( this )[ 0 ].value}/5)` );
+            }).appendTo( mark_p );
+            $( "#test-application" ).append( mark_p )
+                .append( `<p>Оставьте комментарий: <input id = "comment"></p>` );
+            $( "<button>", {
+                class: "btn btn-success m-2"
+            }).click( function() {
+
+                function Complete( dt, status ) {
+                    if ( status < 200 || status >= 300 ) {
+                        console.error( dt );
+                        return;
+                    };
+                    alert( "Тест завершён успешно!" );
+                    $( location ).attr( "hash", "" );
+                    MainPage();
+                }
+
+                function PostFeedback( feedback ) {
+                    $.ajax({
+                        url: "/feedback",
+                        method: 'POST',
+                        dataType: "json",
+                        data: feedback,
+
+                        success: Complete,
+                        error: ( jq, st, err ) => {
+                            console.error( err );
+                        }
+                    })
+                }
+
+                function UpdateFeedback( feedback ) {
+                    $.ajax({
+                        url: "/feedback",
+                        method: 'PATCH',
+                        dataType: "json",
+                        data: feedback,
+
+                        success: Complete,
+                        error: ( jq, st, err ) => {
+                            console.error( err );
+                        }
+                    })
+                }
+
+                var feedback = {}
+
+                feedback.title = test.title,
+                feedback.questions = [];
+
+                $( "#test-container" ).children( "div" ).each( function( idx ) {
+                    feedback.questions[ idx ] = {};
+                    feedback.questions[ idx ][ "text" ] = $( this ).children( ".question-text" ).text();
+                    feedback.questions[ idx ][ "answers" ] = QuestionTypes[ $( this )[ 0 ].type ].collector( $( this ) );
+                });
+
+                feedback.mark = $( "#mark" )[ 0 ].value;
+                feedback.comment = $( "#comment" )[ 0 ].value;
+
+                if ( cookie_pairs[ "login" ] === undefined ) {
+                    PostFeedback( feedback );
+                    return;
+                }
+
+                $.ajax({
+                    url: "/feedback",
+                    method: 'GET',
+                    dataType: "json",
+                    data: {
+                        user: cookie_pairs[ "login" ],
+                        test: test.title,
+                    },
+
+                    success: ( dt, status, jqXHR ) => {
+                        if ( dt.length > 0 ) {
+                            UpdateFeedback( feedback );
+                        } else {
+                            PostFeedback( feedback );
+                        }
+                    },
+
+                    error: ( jq, st, err ) => {
+                        console.error( err );
+                    }
+                })
+                    
+            }).html( "Завершить тест" ).appendTo( $( "#test-application" ) );
+        }
+
+        LoadPage( "button_back", () => {
+            $.ajax({
+                url: "/tests",
+                method: 'GET',
+                dataType: "json",
+                data: {
+                    title: decodeURI( DecodeHash()[ "fetch_test" ] ),
+                },
+
+                success: LoadTest,
+            })
+        });
+    </script>
+</div>

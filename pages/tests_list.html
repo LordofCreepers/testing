@@ -1,0 +1,69 @@
+<div id = "tests-list">
+    <script>
+        function Page_List( res ) {
+            console.log( res );
+            const questions = res;
+            for ( const i in questions ) {
+                const q = questions[ i ];
+                console.log( q );
+                const bkg = $( "<div>", {
+                    class: "question-preview-bkg border border-dark"
+                }).appendTo( $( "#tests-list" ) );
+                bkg.append( `<h4 class = "question-title-preview bg-dark">${q.title}</h4>` );
+                bkg.append( `<h5 class = "question-authorship-preview">Автор: ${q.publishedby_login}</h5>` );
+                bkg.append( `<h5 class = "question-description-preview">Описание: ${q.description}</h5>` );
+                bkg.append( `<h6 class = "question-rating-preview">Средняя оценка: ${q.overall_rating} на основе ${q.times_completed} отзыва(-ов)</h6>` );
+                bkg.append( `<button class = "question-fetch-preview btn btn-success m-1">Пройти и оценить</button>` );
+                bkg.children( "button.question-fetch-preview" ).click( function() {
+                    $( location ).attr( "hash", `fetch_test=${q.title}` );
+                    ResetPage();
+                    LoadPage( "test" );
+                });
+                const fdbck_btn = $( "<button>", {
+                    class: "question-feedback-preview btn btn-secondary m-1" 
+                }).html( "Читать отзывы" ).appendTo( bkg );
+                fdbck_btn.click( function() {
+                    const div = $( this ).parent();
+                    if ( div.hasClass( "spinner-border" ) || div.hasClass( "vstack" ) ) return;
+                    const stack = $( "<div>", {
+                        class: "vstack gap-2 border border-primary m-2",
+                    }).appendTo( div );
+                    const circ_bar = $( "<div>", {
+                        class: "spinner-border text-primary"
+                    }).append( `<span class = "visually-hidden">Загрузка...</span>` );
+                    stack.append( circ_bar );
+                    $.ajax({
+                        url: "/feedback",
+                        method: 'GET',
+                        data: {
+                            test: div.children( ".question-title-preview" ).text()
+                        },
+                        dataType: "json",
+                        success: ( dt, status, jqXHR ) => {
+                            circ_bar.remove();
+                            for ( const fb of dt ) {
+                                console.log( `${fb.completed_by}` );
+                                const cont = $( "<div>", {
+                                    class: "border border-secondary m-2",
+                                }).appendTo( stack );
+                                cont.append( `<h5>${fb.completed_by} поставил ${fb.rating}</h5>` );
+                                cont.append( `<h6>"${fb.comment}"</h6>` );
+                            };
+                        },
+
+                        error: ( jqXHR, status, err ) => {
+                        }
+                    })
+                })
+            }
+        };
+
+        $.ajax({
+            url: "/tests",
+            method: 'GET',
+            data: {},
+            dataType: "json",
+            success: Page_List,
+        });
+    </script>
+</div>

@@ -1,0 +1,13 @@
+<div id = "create-test">
+    <button id = "create-test-button" class = "btn btn-success">Добавить новый тест</button>
+</div>
+<script>
+    $( "#create-test-button" ).click( function() {
+        if ( !cookie_pairs[ "login" ] ) {
+            alert( "Для этого действия необходима авторизация" );
+            return;
+        };
+        ResetPage();
+        LoadPage( "form" );
+    });
+</script>

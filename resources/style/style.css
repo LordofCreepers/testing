@@ -1,0 +1,42 @@
+.white {
+    color: white;
+}
+
+.account {
+    margin-left: 0.5%;
+    margin-right: 0.5%;
+}
+
+.captcha {
+    margin-top: 0.5%;
+}
+
+.question-preview-bkg {
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-top: 1%;
+    margin-bottom: 1%;
+    padding: 0.5%;
+}
+
+.question-title-preview {
+    margin: 0.5%;
+    color: white;
+}
+
+#auth-form {
+    margin: auto;
+    left: 50%;
+    text-align: center;
+    background-color: black;
+}
+
+#create-test {
+    margin-left: 1%;
+    margin-top: 2.5%;
+    margin-bottom: 2.5%;
+}
+
+#test-application {
+    margin-left: 2.5%;
+}

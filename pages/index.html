@@ -1,0 +1,140 @@
+<script>
+    let DecodeHash = function() {
+        var hash_content = $( location ).attr( "hash" ).substr( 1 );
+        hash_content = hash_content.indexOf( ";" ) > -1 ? hash_content.split( "?" ) : [ hash_content ];
+        var hash_arr = {};
+        hash_content.forEach( route => {
+            const data = route.split( "=" );
+            const key = data[ 0 ];
+            const value = data[ 1 ];
+            hash_arr[ key ] = value;
+        });
+        return hash_arr;
+    }
+    
+    const QuestionTypes = {
+        "Текст": { 
+            "editor": ( el ) => {
+                el.append( $( "<input>", {
+                    type: "text",
+                    value: "Ответ"
+                }));
+            },
+
+            "formatter": ( el, data ) => {
+                el.append( `<input value = "Ответ">` );
+            },
+
+            "collector": ( el ) => {
+                return [
+                    el.children( "input" )[ 0 ].value
+                ];
+            },
+
+
+            "handler": ( el ) => {
+                return {
+                    correct_answers: [ el.children( "input" )[ 0 ].value ]
+                };
+            }
+        },
+
+        "Варианты": {
+            "editor": ( el ) => {
+                el.append( $( "<button>", {
+                    class: "add btn btn-success m-2"
+                }).html( "+" ).click( function() {
+                    const len = $( this ).parent().children( "p" ).length + 1;
+                    $( this ).parent().append( 
+                        $( "<p>" ).append(
+                            `№${len}`
+                        ).append(
+                            "<input>"
+                        ).append( $( "<input>", {
+                            type: "checkbox",
+                            class: "form-check-input"
+                        })).append( $( "<button>", {
+                            class: "remove btn btn-danger"
+                        }).html( "-" ).click( function() {
+                            $( this ).parent().remove();
+                        })
+                    ));
+                }));
+            },
+
+            "formatter": ( el, data ) => {
+                for ( const variant of data.variants ) {
+                    el.append( `<p class = "variant-answer"><input type = "checkbox" class = "form-check-input">${variant}</p>` );
+                };
+            },
+
+            "collector": ( el ) => {
+                var answers = [];
+                el.children( ".variant-answer" ).each( function() {
+                    if ( $( this ).children( "input:checked" ).length == 0 ) return;
+                    answers.push( $( this ).text() );
+                });
+                return answers;
+            },
+
+            "handler": ( el ) => {
+                var answers = {
+                    variants: [],
+                    correct_answers: [],
+                }
+                el.children( "p" ).each( function( idx ) {
+                    const variant = $( this ).children( "input:not(:checkbox)" )[ 0 ].value;
+                    answers.variants.push( variant );
+                    if ( $( this ).children( "input:checkbox" )[ 0 ].checked ) {
+                        answers.correct_answers.push( variant );
+                    };
+                });
+                return answers;
+            },
+        },
+    };
+
+    const actions = {
+        login: "login-button",
+        reg: "register-button",
+    };
+
+    let LoadPage = function( page, cb = function() {} ) {
+        $.ajax({
+            url: "/page",
+            method: 'GET',
+            dataType: "html",
+            data: {
+                src: page,
+            },
+
+            success: ( dt, status, jqXHR ) => {
+                console.log( status );
+                $( "body" ).append( dt );
+                cb();
+            }
+        })
+    };
+
+    let ResetPage = function() {
+        $( "body" ).children().remove();
+    };
+
+    let MainPage = function() {
+        ResetPage();
+        LoadPage( "auth", () => 
+            LoadPage( "create_test", () =>
+                LoadPage( "tests_list" )
+            )
+        );
+    }
+
+    var cks = {};
+    $( document ).attr( "cookie" ).split( ";" ).forEach( (val, idx) => {
+        const pair = val.split( "=" );
+        cks[ pair[ 0 ].trim() ] = pair[ 1 ].trim();
+    })
+    const cookie_pairs = cks;
+
+    MainPage();
+</script>

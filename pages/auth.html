@@ -1,0 +1,194 @@
+<div id = "auth-form">
+    <script>
+        function AuthForm( res ) {
+            const logged_in = res[ "login" ] !== undefined && res[ "login" ] != "";
+
+            $( "#auth-form" ).append( $( "<div>", {
+                id: "account-tab",
+            }));
+            var tab = $( "#account-tab" );
+
+            const welcome = $( "<h5>", {
+                class: "white",
+            })
+                .html( "Добро пожаловать, " + ( logged_in ? res[ "login" ] : "Гость" ) )
+                .appendTo( tab );
+
+            if ( logged_in ) {
+                const log_out = $( "<button>", {
+                    class: "btn btn-primary",
+                    id: "logout-button",
+                }).html( "Выйти из аккаунта" ).click( function() {
+
+                    $.ajax({
+                        url: "/auth",
+                        method: "DELETE",
+                        dataType: "json",
+                        data: {},
+
+                        success: ( dt, status, jqXHR ) => {
+                            location.reload();
+                        },
+
+                        error: ( jqXHR, status, dt ) => {
+                            console.error( status );
+                            console.error( dt );
+                        }
+                    })
+
+                });
+                tab.append( log_out );
+
+            } else {
+
+                const login = $( "<input>", {
+                    class: "account",
+                    type: "text",
+                    value: "Логин",
+                    id: "login-field",
+                });
+                tab.append( login );
+
+                const password = $( "<input>", {
+                    class: "account",
+                    type: "text",
+                    value: "Пароль",
+                    id: "password-field"
+                });
+                tab.append( password );
+
+                const log_in = $( "<button>", {
+                    class: "btn btn-primary account",
+                    id: "login-button",
+                }).html( "Войти" ).click( CaptchadAction );
+                tab.append( log_in );
+
+                const register = $( "<button>", {
+                    class: "btn btn-secondary account",
+                    id: "register-button",
+                }).html( "Зарегистрироваться" ).click( CaptchadAction );
+                tab.append( register );
+            }
+        }
+
+        function RegenerateCaptcha( img ) {
+            img.src = "";
+
+            var xhr = new XMLHttpRequest();
+            xhr.open( 'POST', '/captcha' );
+            xhr.responseType = 'blob';
+
+            xhr.onreadystatechange = function() {
+                if ( !( this.readyState == 4 && this.status >= 200 && this.status < 300 ) ) return;
+                img.src = ( window.URL || window.webkitURL ).createObjectURL( this.response );
+            };
+
+            xhr.send();
+        }
+
+        function Login( login, password, captcha ) {
+            $.ajax({
+                url: "/auth",
+                method: "POST",
+                dataType: "json", 
+                data: {
+                    login: login,
+                    password: password,
+                    captcha: captcha
+                },
+
+                success: ( dt, status, jqXHR ) => {
+                    console.log( dt );
+                    if ( !dt[ "success" ] ) {
+                        if ( dt[ "error" ] != undefined && dt[ "error" ] == "Incorrect captcha" ) {
+                            alert( "CAPTCHA введена неверно. Попробуйте ещё раз" );
+                            RegenerateCaptcha( $( "#captcha" )[ 0 ] );
+                            return;
+                        }
+                        alert( dt[ "reasons" ] );
+                        return;
+                    };
+                    location.reload();
+                },
+
+                error: ( jqXHR, status, dt ) => {
+                    console.error( status );
+                    console.error( dt );
+                    return;
+                }
+            });
+        };
+
+        function Register( login, password, captcha ) {
+            $.ajax({
+                url: "/users",
+                method: "POST",
+                dataType: "json",
+                data: {
+                    login: login,
+                    password: password,
+                },
+
+                success: ( dt, status, jqXHR ) => {
+                    Login( login, password, captcha );
+                },
+
+                error: ( jqXHR, status, dt ) => {
+                    console.error( status );
+                    console.error( dt )
+                }
+            });
+        }
+
+        function CaptchadAction() {
+            if ( $( "#captcha-container" )[ 0 ] ) {
+                if ( $( this )[ 0 ].id == actions[ "login" ] ) {
+                    Login( $( "#login-field" )[ 0 ].value, $( "#password-field" )[ 0 ].value, $( "#captcha-field" )[ 0 ].value );
+                }
+                else if( $( this )[ 0 ].id == actions[ "reg" ] ) {
+                    Register( $( "#login-field" )[ 0 ].value, $( "#password-field" )[ 0 ].value, $( "#captcha-field" )[ 0 ].value );
+                };
+                return;
+            };
+
+            var xhr = new XMLHttpRequest();
+            xhr.open( 'POST', '/captcha' );
+            xhr.responseType = 'blob';
+
+            xhr.onreadystatechange = function() {
+                if ( this.readyState == 4 && this.status >= 200 && this.status < 300 ) {
+
+                    $( "#account-tab" ).append( $( "<div>", {
+                        id: "captcha-container",
+                    }));
+
+                    $( "#captcha-container" ).append( $( "<img>", {
+                        id: "captcha",
+                    }));
+                    $( "#captcha" )[ 0 ].src = ( window.URL || window.webkitURL ).createObjectURL( this.response );
+
+                    $( "#captcha-container" ).append( $( "<p>", {
+                        id: "captcha-controls",
+                    }));
+
+                    $( "<button>", {
+                        class: "btn btn-secondary captcha",
+                        id: "captcha-regenerate",
+                    })
+                        .html( "Сгенерировать" )
+                        .appendTo( $( "#captcha-controls" ) ).click( function() {
+                            RegenerateCaptcha( $( "#captcha" )[ 0 ] );
+                        });
+
+                    $( "#captcha-controls" ).append( $( "<input>", {
+                        class: "captcha",
+                        id: "captcha-field",
+                    }));
+                }
+            };
+            xhr.send();
+        }
+        
+        AuthForm( cookie_pairs );
+    </script>
+</div>

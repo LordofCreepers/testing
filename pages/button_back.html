@@ -1,0 +1,7 @@
+<button class = "btn btn-danger m-2" id = "back">Назад</button>
+<script>
+    $( "#back" ).click( function() {
+        if ( !confirm( "Вы уверены, что хотите вернуться назад? Все изменения будут утеряны" ) ) return;
+        MainPage();
+    });
+</script>

@@ -1,0 +1,117 @@
+<div class = "m-2" id = "test-form">
+    <h4 class = "text-light bg-dark m-2">Новый тест</h4>
+    <p class = "test-title">
+        Название теста:
+        <input type = "text" id = "test-title">
+    </p>
+    <p class = "test-description">
+        Краткое описание:
+        <input type = "text" id = "test-description">
+    </p>
+    <p class = "questions-addition">
+        Вопросы: 
+        <button id = "add-question" class = "btn btn-success add-button">+</button>
+    </p>
+    <div id = "questions-body">
+        <script>
+            LoadPage( "button_back" );
+            $( "#add-question" ).click( () => {
+                var question = $( "<div>", {
+                    class: "question-form border border-dark m-5",
+                }).appendTo( $( "#questions-body" ) );
+
+                question.append( $( "<button>", {
+                    class: "btn btn-danger m-2 remove-button"
+                }).html( "-" ).click( function() {
+                    $( this ).parent().remove();
+                }));
+
+                question.append( $( `<input>`, {
+                    class: "question-field",
+                    type: 'text',
+                    value: "Вопрос"
+                }));
+
+                var options = "";
+                for ( const title in QuestionTypes ) {
+                    options += `<option val = "${ title }">${ title }</option>`;
+                };
+                question.append( $( "<select>", {
+                    class: "question-type",
+                    append: options,
+                }));
+
+                question.append( $( "<div>", {} ) );
+
+                question.children( "select" ).change( function() {
+                    const val = $( this ).children( "option:selected" )[ 0 ].value;
+                    var div = $( this ).parent().children( "div" );
+                    div.children().remove();
+                    QuestionTypes[ val ].editor( div );
+                }).change();
+            })
+        </script>
+    </div>
+    <button id = "save-question" class = "btn btn-success commit-button">Сохранить тест</button>
+    <script>
+        $( "#save-question" ).click( function() {
+            const title = $( "#test-title" )[ 0 ].value;
+            if ( title == "" ) {
+                alert( "Название теста не может быть пустым" )
+            };
+
+            var questions_package = [];
+            const questions = $( "#questions-body" ).children( "div" );
+                
+            if ( questions.length == 0 ) {
+                alert( "Для успешного сохранения теста добавьте хотя-бы один вопрос" );
+                return;
+            };
+
+            var success = true;
+
+            questions.each( function( idx ) {
+                questions_package[ idx ] = {};
+                const type = $( this ).children( "select.question-type" )[ 0 ].value;
+                questions_package[ idx ].type = type;
+                const handle = QuestionTypes[ type ].handler;
+                questions_package[ idx ].text = $( this ).children( "input.question-field" )[ 0 ].value;
+                var answers = handle( $( this ).children( "div" ) );
+                console.log( answers );
+                if ( typeof answers[ "correct_answers" ] === "undefined" || answers[ "correct_answers" ].length == 0 ) {
+                    console.error( "'handler' return value requires 'correct_answers' field to be set and be non-empty" );
+                    alert( "Один из ваших вопросов не имеет правильного ответа" );
+                    success = false;
+                    return;
+                };
+                for ( const key in answers ) {
+                    if ( typeof questions_package[ idx ][ key ] !== "undefined" ) continue;
+                    questions_package[ idx ][ key ] = answers[ key ];
+                };
+            });
+
+            console.log( questions_package );
+
+            if ( !success ) return;
+
+            $.ajax({
+                url: "/tests",
+                method: 'POST',
+                dataType: "json",
+                data: { 
+                    title: title,
+                    description: $( "#test-description" )[ 0 ].value,
+                    questions: questions_package 
+                },
+                success: ( res, status, jqXHR ) => {
+                    console.log( res );
+                    console.log( status );
+                    if ( status == "success" ) {
+                        alert( "Ваш тест был успешно добавлен" );
+                    }
+                    MainPage();
+                }
+            });
+        });
+    </script>
+</div>
